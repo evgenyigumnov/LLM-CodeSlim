@@ -1,5 +1,3 @@
-# out.ps1
-
 # Remove existing out.txt if it exists
 if (Test-Path -Path "out.txt") {
     Remove-Item -Path "out.txt" -Force
