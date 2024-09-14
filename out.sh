@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# Удаляем существующий out.txt, если он есть
+# Remove existing out.txt if it exists
 rm -f out.txt
 
-# Массивы
-folders_to_ignore=("target" ".git" ".github" ".gitignore" ".idea" )   # Папки, которые нужно игнорировать
-extensions_to_search=( "rs" )                              # Расширения файлов, которые нужно искать
-filenames_to_search=("Cargo.toml" "core.rs" "text.rs" "json.rs")                       # Имена файлов, которые нужно искать
-comment_chars=("#" "//" "/*")                            # Символы, обозначающие комментарии
-stop_words=("#[cfg(test)]")                              # Стоп-слова, после которых игнорировать оставшиеся строки в файле
+# Arrays
+folders_to_ignore=("target" ".git" ".github" ".gitignore" ".idea" )   # Folders to ignore
+extensions_to_search=( "rs" )                              # File extensions to search for
+filenames_to_search=("Cargo.toml" "core.rs" "text.rs" "json.rs")                       # Filenames to search for
+comment_chars=("#" "//" "/*")                            # Characters that denote comments
+stop_words=("#[cfg(test)]")                              # Stop words after which to ignore the remaining lines in the file
 
-# Строим команду 'find'
+# Build the 'find' command
 
-# Начинаем с базовой команды 'find'
+# Start with the basic 'find' command
 find_cmd="find ."
 
-# Добавляем папки для игнорирования
+# Add folders to ignore
 if [ ${#folders_to_ignore[@]} -gt 0 ]; then
     ignore_dir_expr=""
     for dir in "${folders_to_ignore[@]}"; do
@@ -27,22 +27,22 @@ if [ ${#folders_to_ignore[@]} -gt 0 ]; then
     find_cmd+=" \\( $ignore_dir_expr \\) -o"
 fi
 
-# Добавляем условия для поиска файлов
+# Add conditions to search for files
 find_cmd+=" \\( "
 
 name_patterns=()
 
-# Добавляем расширения файлов
+# Add file extensions
 for ext in "${extensions_to_search[@]}"; do
     name_patterns+=("-name '*.$ext'")
 done
 
-# Добавляем имена файлов
+# Add filenames
 for fname in "${filenames_to_search[@]}"; do
     name_patterns+=("-name '$fname'")
 done
 
-# Объединяем все паттерны с помощью -o
+# Combine all patterns using -o
 for ((i=0; i<${#name_patterns[@]}; i++)); do
     find_cmd+=" ${name_patterns[$i]}"
     if [ $i -lt $((${#name_patterns[@]} - 1)) ]; then
@@ -52,13 +52,13 @@ done
 
 find_cmd+=" \\) -type f -print"
 
-# Выводим финальную команду для отладки (можно закомментировать эту строку)
+# Print the final command for debugging (you can comment out this line)
 # echo "Running command: $find_cmd"
 
-# Построение регулярного выражения для комментариев
+# Build the regular expression for comments
 comment_pattern=""
 for ((i=0; i<${#comment_chars[@]}; i++)); do
-    # Экранируем специальные символы в символах комментариев
+    # Escape special characters in comment characters
     escaped_char=$(printf '%s\n' "${comment_chars[$i]}" | sed 's/[][(){}.*+?^$\\|/]/\\&/g')
     if [ $i -eq 0 ]; then
         comment_pattern="$escaped_char"
@@ -67,26 +67,26 @@ for ((i=0; i<${#comment_chars[@]}; i++)); do
     fi
 done
 
-# Выполняем команду 'find' и обрабатываем результаты
+# Execute the 'find' command and process the results
 while read filepath; do
     echo -e "\n#### $filepath ####" >> out.txt
     stop=false
-    # Обрабатываем файл построчно
+    # Process the file line by line
     while IFS= read -r line; do
         if [ "$stop" = true ]; then
             break
         fi
-        # Удаляем табуляции
+        # Remove tabs
         line="${line//$'\t'/}"
-        # Удаляем ведущие пробелы
+        # Remove leading spaces
         line="${line#"${line%%[![:space:]]*}"}"
-        # Удаляем конечные пробелы
+        # Remove trailing spaces
         line="${line%"${line##*[![:space:]]}"}"
-        # Пропускаем строки, которые пустые или содержат только пробелы
+        # Skip lines that are empty or contain only spaces
         if [[ -z "$line" ]]; then
             continue
         fi
-        # Проверяем на стоп-слова
+        # Check for stop words
         for stop_word in "${stop_words[@]}"; do
             if [[ "$line" == "$stop_word" ]]; then
                 stop=true
@@ -96,11 +96,11 @@ while read filepath; do
         if [ "$stop" = true ]; then
             break
         fi
-        # Пропускаем строки, которые являются комментариями
+        # Skip lines that are comments
         if [[ "$line" =~ ^($comment_pattern) ]]; then
             continue
         fi
-        # Записываем обработанную строку в out.txt
+        # Write the processed line to out.txt
         echo "$line" >> out.txt
     done < "$filepath"
 done < <(eval $find_cmd)

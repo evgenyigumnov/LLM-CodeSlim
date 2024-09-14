@@ -1,18 +1,28 @@
 # out.ps1
 
-# Удаляем существующий out.txt, если он есть
+# Remove existing out.txt if it exists
 if (Test-Path -Path "out.txt") {
     Remove-Item -Path "out.txt" -Force
 }
 
-# Определяем массивы
+# Define arrays
+
+# Folders and files to ignore during the search
 $foldersToIgnore = @("target", ".git", ".github", ".gitignore", ".idea")
+
+# File extensions to search for
 $extensionsToSearch = @("rs")
+
+# Specific filenames to search for
 $filenamesToSearch = @("Cargo.toml", "core.rs", "text.rs", "json.rs")
+
+# Characters that denote comments in the files
 $commentChars = @("#", "//", "/*")
+
+# Words that, when encountered, will stop processing the current file
 $stopWords = @("#[cfg(test)]")
 
-# Функция для построения фильтрации путей
+# Function to build file filtering based on provided criteria
 function Get-FilteredFiles {
     param (
         [string[]]$IgnoreFolders,
@@ -20,14 +30,14 @@ function Get-FilteredFiles {
         [string[]]$Filenames
     )
 
-    # Строим регулярное выражение для игнорируемых папок
+    # Build a regex pattern for ignored folders
     if ($IgnoreFolders.Count -gt 0) {
         $ignorePattern = ($IgnoreFolders | ForEach-Object { [regex]::Escape($_) }) -join '|'
     } else {
         $ignorePattern = ""
     }
 
-    # Строим список фильтров для расширений и имен файлов
+    # Build a list of filters for extensions and filenames
     $nameFilters = @()
     foreach ($ext in $Extensions) {
         $nameFilters += "*.$ext"
@@ -36,10 +46,10 @@ function Get-FilteredFiles {
         $nameFilters += $fname
     }
 
-    # Получаем все файлы с заданными расширениями или именами
+    # Get all files with the specified extensions or filenames
     Get-ChildItem -Path . -Recurse -File -Include $nameFilters | Where-Object {
         if ($ignorePattern) {
-            # Проверяем, содержит ли полный путь одну из игнорируемых папок
+            # Check if the full path contains any of the ignored folders
             -not ($_.FullName -match "\\($ignorePattern)\\")
         } else {
             $true
@@ -47,21 +57,21 @@ function Get-FilteredFiles {
     }
 }
 
-# Строим регулярное выражение для комментариев
+# Build a regex pattern for comments
 $escapedCommentChars = $commentChars | ForEach-Object { [regex]::Escape($_) }
 $commentPattern = $escapedCommentChars -join '|'
 
-# Получаем список файлов
+# Get the list of files to process
 $files = Get-FilteredFiles -IgnoreFolders $foldersToIgnore -Extensions $extensionsToSearch -Filenames $filenamesToSearch
 
-# Обрабатываем каждый файл
+# Process each file
 foreach ($file in $files) {
-    # Добавляем заголовок файла в out.txt
+    # Add file header to out.txt
     "`n#### $($file.FullName) ####" | Out-File -FilePath "out.txt" -Append -Encoding utf8
 
     $stop = $false
 
-    # Читаем файл построчно
+    # Read the file line by line
     Get-Content -Path $file.FullName | ForEach-Object {
         if ($stop) {
             return
@@ -69,18 +79,18 @@ foreach ($file in $files) {
 
         $line = $_
 
-        # Удаляем табуляции
+        # Remove tabs
         $line = $line -replace "`t", ""
 
-        # Удаляем ведущие и конечные пробелы
+        # Trim leading and trailing spaces
         $line = $line.Trim()
 
-        # Пропускаем пустые строки
+        # Skip empty lines
         if ([string]::IsNullOrWhiteSpace($line)) {
             return
         }
 
-        # Проверяем на стоп-слова
+        # Check for stop words
         foreach ($stopWord in $stopWords) {
             if ($line -eq $stopWord) {
                 $stop = $true
@@ -91,12 +101,12 @@ foreach ($file in $files) {
             return
         }
 
-        # Пропускаем строки, являющиеся комментариями
+        # Skip lines that are comments
         if ($line -match "^($commentPattern)") {
             return
         }
 
-        # Записываем обработанную строку в out.txt
+        # Write the processed line to out.txt
         $line | Out-File -FilePath "out.txt" -Append -Encoding utf8
     }
 }
