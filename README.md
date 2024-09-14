@@ -15,3 +15,23 @@ LLM-CodeSlim is a bash and power shell script designed to streamline your codeba
 ## Usage
 - Simply run the script in your project directory to generate a minimized out.txt containing the optimized code ready for use with large language models.
 - Before running the script, edit the following arrays to suit your project's needs: *folders_to_ignore, extensions_to_search, filenames_to_search, comment_chars, and stop_words*.  
+
+## Example configuration for a Rust project (including all *.rs files in out.txt):
+
+```bash
+folders_to_ignore=("target" ".git" ".github" ".gitignore" ".idea" )   # Folders to ignore
+extensions_to_search=( "rs" )                              # File extensions to search for
+filenames_to_search=("Cargo.toml")                       # Filenames to search for
+comment_chars=("#" "//" "/*")                            # Characters that denote comments
+stop_words=("#[cfg(test)]")                              # Stop words after which to ignore the remaining lines in the file
+```
+
+## Example configuration for a Rust project (including only specific files in out.txt):
+
+```bash
+folders_to_ignore=("target" ".git" ".github" ".gitignore" ".idea" )   # Folders to ignore
+extensions_to_search=( )                              # File extensions to search for
+filenames_to_search=("Cargo.toml" "lib.rs" "core.rs")                       # Filenames to search for
+comment_chars=("#" "//" "/*")                            # Characters that denote comments
+stop_words=("#[cfg(test)]")                              # Stop words after which to ignore the remaining lines in the file
+```
